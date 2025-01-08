@@ -1,0 +1,5 @@
+Using the Chatbot
+Upload Files: Click the "Upload Files" button to upload your PDF, DOCX, or image files.
+Query the Document: Type a query in the input box to ask the bot questions about the uploaded documents. The bot will provide responses based on the content of the files.
+Summarize the Document: Use the "Summarize the Document" button to generate a summary of the entire document.
+Export Chat History: You can download the chat history as a .txt or .pdf file by clicking the respective download buttons.
