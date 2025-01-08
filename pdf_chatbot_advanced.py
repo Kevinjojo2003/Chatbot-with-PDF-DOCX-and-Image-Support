@@ -1,4 +1,4 @@
-!pip install openai streamlit fpdf PyPDF2 Pillow pytesseract docx
+pip install openai streamlit fpdf PyPDF2 Pillow pytesseract docx
 
 import streamlit as st
 import os
