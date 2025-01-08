@@ -2,7 +2,6 @@
 
 This project is a chatbot application that can process PDF, DOCX, and image files, allowing users to query text extracted from these files. It leverages OpenAI's GPT API to respond to user queries. The application is built using Streamlit and is designed to be user-friendly, providing an interactive chat interface.
 
-For Preview : "https://chatbot-with-pdf-docx-and-image-support-nz3f4iorwuqujz2v6sncxm.streamlit.app/"
 ## Features
 
 - **Document Support**: Supports PDF, DOCX, and image files (JPG, PNG).
