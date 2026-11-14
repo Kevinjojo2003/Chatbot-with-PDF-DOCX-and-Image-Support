@@ -4,25 +4,26 @@ from fpdf import FPDF
 from PyPDF2 import PdfReader
 from PIL import Image
 import docx
-from openai import OpenAI
+from google import genai
 import json
 import textwrap
 
-# OpenAI configuration: the key comes from Streamlit secrets or the OPENAI_API_KEY environment variable.
-MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+# Gemini configuration: the key comes from Streamlit secrets or the GEMINI_API_KEY environment variable.
+MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 MAX_DOC_CHARS = 60000  # keep the prompt within the model's context window
 
 
 def get_client():
     try:
-        key = st.secrets.get("OPENAI_API_KEY")
+        key = st.secrets.get("GEMINI_API_KEY")
     except Exception:  # no secrets file present
         key = None
-    key = key or os.getenv("OPENAI_API_KEY")
+    key = key or os.getenv("GEMINI_API_KEY")
     if not key:
-        st.error("Missing OPENAI_API_KEY. Add it to Streamlit secrets or your environment.")
+        st.error("Missing GEMINI_API_KEY. Add it to Streamlit secrets or your environment.")
         st.stop()
-    return OpenAI(api_key=key)
+    return genai.Client(api_key=key)
+
 
 # Initialize session state for chat history
 if 'messages' not in st.session_state:
@@ -56,15 +57,14 @@ def image_to_text(image):
     import pytesseract
     return pytesseract.image_to_string(image)
 
-# Function to query OpenAI API for chatbot response
-def query_openai(question, document_text=""):
-    system = "You are a helpful assistant. Answer using the provided document when one is given; say so if the answer is not in it."
-    messages = [{"role": "system", "content": system}]
+# Function to query Gemini API for chatbot response
+def query_gemini(question, document_text=""):
+    prompt = "Answer using the provided document when one is given; say so if the answer is not in it.\n\n"
     if document_text:
-        messages.append({"role": "system", "content": "Document:\n" + document_text[:MAX_DOC_CHARS]})
-    messages.append({"role": "user", "content": question})
-    response = get_client().chat.completions.create(model=MODEL, messages=messages, max_tokens=500)
-    return response.choices[0].message.content.strip()
+        prompt += "Document:\n" + document_text[:MAX_DOC_CHARS] + "\n\n"
+    prompt += "Question: " + question
+    response = get_client().models.generate_content(model=MODEL, contents=prompt)
+    return (response.text or "").strip()
 
 # Display chat messages with styling
 def display_chat(messages):
@@ -78,14 +78,12 @@ def display_chat(messages):
 def clear_chat():
     st.session_state.messages = []
 
-# Summarize the document using OpenAI
+# Summarize the document using Gemini
 def summarize_document(text):
-    response = get_client().chat.completions.create(
-        model=MODEL,
-        messages=[{"role": "user", "content": "Summarize the following document:\n" + text[:MAX_DOC_CHARS]}],
-        max_tokens=400,
+    response = get_client().models.generate_content(
+        model=MODEL, contents="Summarize the following document:\n" + text[:MAX_DOC_CHARS]
     )
-    return response.choices[0].message.content.strip()
+    return (response.text or "").strip()
 
 # Save chat history to PDF
 def save_chat_history_to_pdf(messages):
@@ -134,8 +132,8 @@ def main():
     if user_input:
         st.session_state.messages.append({'role': 'user', 'content': user_input})
         
-        # Get response from OpenAI
-        response = query_openai(user_input, st.session_state.get('text', ''))
+        # Get response from Gemini
+        response = query_gemini(user_input, st.session_state.get('text', ''))
         st.session_state.messages.append({'role': 'bot', 'content': response})
         
     # Display chat history
