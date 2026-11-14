@@ -49,8 +49,12 @@ After logging in, navigate to the API section and generate a new API key.
 Copy the API key.
 
 ### 5. Set Your OpenAI API Key
-Method 1: Set the API Key in the Script
-You can manually set the OpenAI API key in the pdf_chatbot_advanced.py script. Open the script and look for the following line:
+Never put the key in the script. Use either:
+
+- an environment variable: `export OPENAI_API_KEY=sk-...`
+- Streamlit secrets: copy `.streamlit/secrets.toml.example` to `.streamlit/secrets.toml` and add your key (the file is git-ignored)
+
+The model defaults to `gpt-4o-mini`; override it with the `OPENAI_MODEL` environment variable.
 
 ### 6. Start the Streamlit App
 Once you have completed the setup, run the following command to start the Streamlit app:
@@ -60,3 +64,10 @@ streamlit run pdf_chatbot_advanced.py
 
 
 
+
+
+## Deploy on Streamlit Community Cloud
+1. Push this repo to GitHub, then go to https://share.streamlit.io and choose **Create app**.
+2. Select this repo, branch `main`, and main file `pdf_chatbot_advanced.py`.
+3. Under **Advanced settings > Secrets**, paste `OPENAI_API_KEY = "sk-..."`.
+4. Deploy. `packages.txt` installs Tesseract so image OCR works.

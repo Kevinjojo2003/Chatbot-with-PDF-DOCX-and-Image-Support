@@ -4,12 +4,25 @@ from fpdf import FPDF
 from PyPDF2 import PdfReader
 from PIL import Image
 import docx
-import openai
+from openai import OpenAI
 import json
 import textwrap
 
-# Set OpenAI API key
-openai.api_key = "Add your Api Key"  # Your API key
+# OpenAI configuration: the key comes from Streamlit secrets or the OPENAI_API_KEY environment variable.
+MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+MAX_DOC_CHARS = 60000  # keep the prompt within the model's context window
+
+
+def get_client():
+    try:
+        key = st.secrets.get("OPENAI_API_KEY")
+    except Exception:  # no secrets file present
+        key = None
+    key = key or os.getenv("OPENAI_API_KEY")
+    if not key:
+        st.error("Missing OPENAI_API_KEY. Add it to Streamlit secrets or your environment.")
+        st.stop()
+    return OpenAI(api_key=key)
 
 # Initialize session state for chat history
 if 'messages' not in st.session_state:
@@ -44,13 +57,14 @@ def image_to_text(image):
     return pytesseract.image_to_string(image)
 
 # Function to query OpenAI API for chatbot response
-def query_openai(question):
-    response = openai.Completion.create(
-        model="text-davinci-003",  # Change to your fine-tuned model ID if needed
-        prompt=question,
-        max_tokens=150
-    )
-    return response.choices[0].text.strip()
+def query_openai(question, document_text=""):
+    system = "You are a helpful assistant. Answer using the provided document when one is given; say so if the answer is not in it."
+    messages = [{"role": "system", "content": system}]
+    if document_text:
+        messages.append({"role": "system", "content": "Document:\n" + document_text[:MAX_DOC_CHARS]})
+    messages.append({"role": "user", "content": question})
+    response = get_client().chat.completions.create(model=MODEL, messages=messages, max_tokens=500)
+    return response.choices[0].message.content.strip()
 
 # Display chat messages with styling
 def display_chat(messages):
@@ -66,12 +80,12 @@ def clear_chat():
 
 # Summarize the document using OpenAI
 def summarize_document(text):
-    response = openai.Completion.create(
-        model="text-davinci-003",  # Change to your fine-tuned model ID if needed
-        prompt=f"Summarize the following document: {text}",
-        max_tokens=200
+    response = get_client().chat.completions.create(
+        model=MODEL,
+        messages=[{"role": "user", "content": "Summarize the following document:\n" + text[:MAX_DOC_CHARS]}],
+        max_tokens=400,
     )
-    return response.choices[0].text.strip()
+    return response.choices[0].message.content.strip()
 
 # Save chat history to PDF
 def save_chat_history_to_pdf(messages):
@@ -121,7 +135,7 @@ def main():
         st.session_state.messages.append({'role': 'user', 'content': user_input})
         
         # Get response from OpenAI
-        response = query_openai(user_input)
+        response = query_openai(user_input, st.session_state.get('text', ''))
         st.session_state.messages.append({'role': 'bot', 'content': response})
         
     # Display chat history
@@ -137,7 +151,7 @@ def main():
     # Clear chat history
     if st.sidebar.button("Clear Chat History"):
         clear_chat()
-        st.experimental_rerun()
+        st.rerun()
 
     # Download options
     if st.sidebar.button("Download Chat History as Text"):
